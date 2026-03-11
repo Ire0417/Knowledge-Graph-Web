@@ -48,7 +48,6 @@ body {
     radial-gradient(circle at 50% 80%, rgba(67, 97, 238, 0.15) 0%, transparent 50%);
   background-attachment: fixed;
   min-height: 100vh;
-  cursor: none; /* 隐藏默认鼠标，使用自定义跟随 */
 }
 
 /* 玻璃拟态通用类 */

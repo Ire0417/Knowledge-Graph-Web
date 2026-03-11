@@ -6,6 +6,9 @@ def build_graph(file_info):
     entities = extract_result.get('entities', [])
     relations = extract_result.get('relations', [])
     
+    print(f"Entities count: {len(entities)}")
+    print(f"Relations count: {len(relations)}")
+    
     # 构建图谱数据结构
     nodes = []
     edges = []
@@ -29,6 +32,13 @@ def build_graph(file_info):
                 'target': entity_map[relation['object']],
                 'relationship': relation['predicate']
             })
+        else:
+            print(f"Skipping relation: {relation['subject']} {relation['predicate']} {relation['object']}")
+            print(f"Subject in entity_map: {relation['subject'] in entity_map}")
+            print(f"Object in entity_map: {relation['object'] in entity_map}")
+    
+    print(f"Final nodes: {len(nodes)}")
+    print(f"Final edges: {len(edges)}")
     
     return {
         'nodes': nodes,

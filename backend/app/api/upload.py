@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from app.config import Config
 from app.data_processing.file_parser import parse_file
+from app.services.rag_service import build_file_vector_store
 
 bp = Blueprint('upload', __name__)
 
@@ -63,7 +64,7 @@ def upload_file():
 @bp.route('/parse', methods=['POST'])
 def parse_uploaded_file():
     """解析上传的文件"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     file_id = data.get('fileId')
     
     if not file_id or file_id not in uploaded_files:
@@ -83,12 +84,32 @@ def parse_uploaded_file():
         # 解析文件
         print(f"开始解析文件: {file_info['path']}")
         parse_result = parse_file(file_info['path'])
-        file_info['status'] = 'parsed'
         file_info['parse_result'] = parse_result
+        file_info['status'] = 'parsed'
         file_info['parse_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        vector_result = {'chunk_count': 0, 'vector_store_path': ''}
+        vector_warning = ''
+
+        # 解析后尝试向量化；若失败，不影响解析成功状态。
+        try:
+            vector_result = build_file_vector_store(file_id, file_info)
+            file_info['rag_ready'] = True
+            file_info.pop('rag_error', None)
+        except Exception as vector_err:
+            file_info['rag_ready'] = False
+            vector_warning = f'Vector build skipped: {str(vector_err)}'
+            file_info['rag_error'] = vector_warning
+            print(f"Vector build failed for {file_id}: {vector_warning}")
         
         print(f"文件解析成功: {file_info['name']}")
-        return jsonify({'success': True, 'message': 'File parsed successfully'})
+        return jsonify({
+            'success': True,
+            'message': 'File parsed successfully',
+            'chunkCount': vector_result.get('chunk_count', 0),
+            'ragReady': bool(file_info.get('rag_ready')),
+            'warning': vector_warning,
+        })
     except Exception as e:
         print(f"Error parsing file: {str(e)}")
         traceback.print_exc()
@@ -96,11 +117,13 @@ def parse_uploaded_file():
         error_msg = f'Parse error: {str(e)}'
         # 常见错误处理
         if 'Unsupported file format' in str(e):
-            error_msg = 'Unsupported file format. Please upload PDF, Word, Excel, TXT, or Markdown files.'
+            error_msg = 'Unsupported file format. Please upload PDF, DOCX, Excel, TXT, Markdown, or image files.'
         elif 'No such file or directory' in str(e):
             error_msg = 'File not found on server. Please upload the file again.'
         elif 'Permission denied' in str(e):
             error_msg = 'Server permission error. Please contact administrator.'
+        elif 'Legacy .doc is not supported' in str(e):
+            error_msg = 'Legacy .doc is not supported yet. Please convert it to .docx and retry.'
         
         file_info['status'] = 'parse_failed'
         file_info['parse_error'] = error_msg

@@ -1,8 +1,10 @@
 import axios from 'axios'
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').trim()
+
 // 创建axios实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: apiBaseUrl,
   timeout: 60000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json'

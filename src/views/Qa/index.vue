@@ -3,6 +3,19 @@
     <div class="page-header">
       <h1 class="page-title">智能问答</h1>
       <p class="page-description">基于知识图谱的智能问答系统，支持自然语言查询</p>
+      <div class="health-panel">
+        <div class="health-panel-header">
+          <span>问答服务状态</span>
+          <button class="btn btn-sm btn-secondary" @click="refreshQaHealth" :disabled="healthLoading">
+            {{ healthLoading ? '检测中...' : '刷新状态' }}
+          </button>
+        </div>
+        <p v-if="healthMessage" :class="['health-tip', healthLevelClass]">{{ healthMessage }}</p>
+        <p v-if="fileHealthTip" class="file-health-tip">{{ fileHealthTip }}</p>
+        <ul v-if="healthIssues.length > 0" class="health-issues">
+          <li v-for="(issue, index) in healthIssues" :key="index">{{ issue }}</li>
+        </ul>
+      </div>
     </div>
     
     <div class="qa-content">
@@ -93,20 +106,115 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useFileStore } from '../../store/fileStore'
-import { useKgStore } from '../../store/kgStore'
 import { qaApi } from '../../api/qa'
 import { formatTime } from '../../utils/format'
 
 const fileStore = useFileStore()
-const kgStore = useKgStore()
 const question = ref('')
 const answer = ref('')
 const isLoading = ref(false)
 const qaHistory = ref([])
 const relatedQuestions = ref([])
+const healthMessage = ref('')
+const healthLevel = ref('info')
+const qaHealth = ref(null)
+const healthLoading = ref(false)
+
+const healthLevelClass = computed(() => {
+  if (healthLevel.value === 'success') return 'tip-success'
+  if (healthLevel.value === 'error') return 'tip-error'
+  return 'tip-info'
+})
+
+const fileHealthTip = computed(() => {
+  const file = qaHealth.value?.file
+  if (!file) return ''
+  if (file.rag_ready) return '当前文件索引状态：已就绪，可直接提问。'
+  if (file.rag_error) return `当前文件索引状态：未就绪（${file.rag_error}）。`
+  return '当前文件索引状态：未就绪，请先完成解析。'
+})
+
+const healthIssues = computed(() => {
+  const checks = qaHealth.value?.checks || {}
+  const issueMap = {
+    api_key: 'API Key',
+    vector_db_path: '向量库路径',
+    embedding: 'Embedding',
+    llm: 'LLM'
+  }
+  return Object.keys(checks)
+    .filter((k) => checks[k] && checks[k].ok === false)
+    .map((k) => `${issueMap[k] || k}: ${checks[k].message}`)
+})
+
+const classifyQaError = (rawMessage = '') => {
+  const msg = String(rawMessage || '')
+  const lower = msg.toLowerCase()
+
+  if (lower.includes('file not found')) {
+    return '未找到文件，请先上传并解析文件。'
+  }
+  if (lower.includes('not parsed yet') || lower.includes('parse failed') || lower.includes('parse error')) {
+    return '文件尚未可用于问答，请先完成解析。'
+  }
+  if (lower.includes('qwen_api_key') || lower.includes('api key') || lower.includes('invalid api key')) {
+    return '问答配置异常：API Key 无效或未配置。'
+  }
+  if (lower.includes('timed out') || lower.includes('timeout') || lower.includes('connection') || lower.includes('network')) {
+    return '问答服务连接超时，请稍后重试。'
+  }
+  if (lower.includes('rate limit') || lower.includes('quota') || lower.includes('429')) {
+    return '问答服务限流或配额不足，请稍后重试。'
+  }
+  if (lower.includes('failed to build vector store') || lower.includes('index is not ready')) {
+    return '知识索引未就绪，请重新解析文件后再试。'
+  }
+  return `问答失败：${msg || '未知错误'}`
+}
+
+const refreshQaHealth = async () => {
+  healthLoading.value = true
+  try {
+    const fileId = fileStore.currentFile?.id || fileStore.uploadedFiles[0]?.id
+    const response = await qaApi.checkHealth(fileId)
+    const health = response.health || {}
+    const fileHealth = health.file || {}
+    qaHealth.value = health
+
+    if (response.success) {
+      healthLevel.value = 'success'
+      healthMessage.value = fileHealth.rag_ready
+        ? '问答服务状态：可用，当前文件索引已就绪。'
+        : '问答服务状态：可用，请先解析文件以构建索引。'
+      return
+    }
+
+    healthLevel.value = 'error'
+    const checks = health.checks || {}
+    if (checks.api_key && checks.api_key.ok === false) {
+      healthMessage.value = `问答服务状态：不可用（API Key）- ${checks.api_key.message}`
+    } else if (checks.embedding && checks.embedding.ok === false) {
+      healthMessage.value = `问答服务状态：不可用（Embedding）- ${checks.embedding.message}`
+    } else if (checks.llm && checks.llm.ok === false) {
+      healthMessage.value = `问答服务状态：不可用（LLM）- ${checks.llm.message}`
+    } else {
+      healthMessage.value = '问答服务状态：不可用，请检查后端配置。'
+    }
+  } catch (_error) {
+    healthLevel.value = 'error'
+    healthMessage.value = '问答服务状态：检测失败，请确认后端服务已启动。'
+    qaHealth.value = {
+      checks: {
+        llm: { ok: false, message: '健康检查请求失败，请确认后端服务运行正常。' }
+      }
+    }
+  } finally {
+    healthLoading.value = false
+  }
+}
 
 const askQuestion = async () => {
   if (!question.value.trim()) {
@@ -143,10 +251,13 @@ const askQuestion = async () => {
       // 清空输入框
       question.value = ''
     } else {
-      ElMessage.error('问答失败: ' + response.message)
+      ElMessage.error(classifyQaError(response.message))
+      await refreshQaHealth()
     }
   } catch (error) {
-    ElMessage.error('问答请求失败')
+    const backendMessage = error?.response?.data?.message || error?.message || ''
+    ElMessage.error(classifyQaError(backendMessage || '问答请求失败'))
+    await refreshQaHealth()
   } finally {
     isLoading.value = false
   }
@@ -207,7 +318,15 @@ const loadQaHistory = async () => {
 
 onMounted(() => {
   loadQaHistory()
+  refreshQaHealth()
 })
+
+watch(
+  () => [fileStore.currentFile?.id, fileStore.uploadedFiles.length],
+  () => {
+    refreshQaHealth()
+  }
+)
 </script>
 
 <style scoped>
@@ -236,6 +355,65 @@ onMounted(() => {
   color: var(--text-secondary);
   max-width: 800px;
   margin: 0 auto;
+}
+
+.health-panel {
+  margin: 14px auto 0;
+  max-width: 900px;
+  padding: 12px 14px;
+  border-radius: var(--border-radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+}
+
+.health-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.health-tip {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.file-health-tip {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.health-issues {
+  margin-top: 8px;
+  padding-left: 18px;
+  color: #ffb3bf;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tip-success {
+  background: rgba(25, 135, 84, 0.2);
+  color: #9be7c4;
+  border-color: rgba(25, 135, 84, 0.4);
+}
+
+.tip-info {
+  background: rgba(13, 110, 253, 0.18);
+  color: #9bc7ff;
+  border-color: rgba(13, 110, 253, 0.38);
+}
+
+.tip-error {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ffb3bf;
+  border-color: rgba(220, 53, 69, 0.4);
 }
 
 .qa-content {

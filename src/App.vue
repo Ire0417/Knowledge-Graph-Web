@@ -1,6 +1,5 @@
 <template>
   <div class="app-container">
-    <MouseFollower />
     <Header />
     <main class="main-content">
       <router-view v-slot="{ Component }">
@@ -14,7 +13,6 @@
 
 <script setup>
 import Header from './components/Header/index.vue'
-import MouseFollower from './components/MouseFollower.vue'
 </script>
 
 <style scoped>

@@ -1,159 +1,172 @@
 import os
-import PyPDF2
-from docx import Document
-import pandas as pd
-from PIL import Image
-import pytesseract
+from typing import Any, Dict, List
 
-def parse_file(filepath):
-    """解析不同格式的文件"""
+import pandas as pd
+import PyPDF2
+import pytesseract
+from docx import Document
+from PIL import Image
+
+def parse_file(filepath: str) -> Dict[str, Any]:
+    """解析不同格式文件，并统一返回结构。"""
+    if not filepath or not os.path.exists(filepath):
+        raise FileNotFoundError(f'File does not exist: {filepath}')
+
     ext = os.path.splitext(filepath)[1].lower()
-    
+
     if ext == '.pdf':
         return parse_pdf(filepath)
-    elif ext in ['.docx', '.doc']:
+    if ext == '.docx':
         return parse_docx(filepath)
-    elif ext == '.txt':
+    if ext == '.doc':
+        raise Exception('Legacy .doc is not supported. Please convert to .docx and retry.')
+    if ext in ['.txt', '.log']:
         return parse_txt(filepath)
-    elif ext == '.md':
+    if ext == '.md':
         return parse_md(filepath)
-    elif ext in ['.xlsx', '.xls']:
+    if ext in ['.xlsx', '.xls']:
         return parse_excel(filepath)
-    else:
-        raise Exception(f'Unsupported file format: {ext}')
+    if ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff']:
+        return parse_image(filepath)
 
-def parse_pdf(filepath):
-    """解析PDF文件"""
-    text = ''
-    images = []
-    tables = []
-    
-    with open(filepath, 'rb') as f:
-        reader = PyPDF2.PdfReader(f)
-        num_pages = len(reader.pages)
-        
-        for page_num in range(num_pages):
-            page = reader.pages[page_num]
-            text += page.extract_text() + '\n'
-            # 实际应用中，还需要提取图片和表格
-    
-    return {
-        'text': text,
-        'images': images,
-        'tables': tables,
-        'page_count': num_pages
-    }
+    raise Exception(f'Unsupported file format: {ext}')
 
-def parse_docx(filepath):
-    """解析Word文件"""
-    text = ''
-    images = []
-    tables = []
-    
+def parse_pdf(filepath: str) -> Dict[str, Any]:
+    """解析PDF文件。"""
+    text_chunks: List[str] = []
+    images: List[str] = []
+    tables: List[Any] = []
+
+    try:
+        with open(filepath, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+
+            if getattr(reader, 'is_encrypted', False):
+                try:
+                    reader.decrypt('')
+                except Exception:
+                    raise Exception('Encrypted PDF is not supported. Please provide an unencrypted file.')
+
+            num_pages = len(reader.pages)
+            print(f"PDF页数: {num_pages}")
+            for page_num, page in enumerate(reader.pages):
+                page_text = page.extract_text() or ''
+                print(f"第{page_num+1}页文本长度: {len(page_text)}")
+                if page_text:
+                    text_chunks.append(page_text)
+                    print(f"第{page_num+1}页前100个字符: {page_text[:100]}...")
+
+        return {
+            'text': '\n'.join(text_chunks).strip(),
+            'images': images,
+            'tables': tables,
+            'page_count': num_pages,
+        }
+    except Exception as e:
+        raise Exception(f'Failed to parse PDF: {str(e)}')
+
+def parse_docx(filepath: str) -> Dict[str, Any]:
+    """解析Word(docx)文件。"""
+    images: List[str] = []
+    tables: List[List[List[str]]] = []
+
     try:
         doc = Document(filepath)
-        
-        # 验证文档结构
-        if not hasattr(doc, 'paragraphs'):
-            raise Exception('Invalid Word document structure')
-        
-        # 检查是否有实际内容
-        if len(doc.paragraphs) == 0 and len(doc.tables) == 0:
-            # 可能是Office主题文件或空文档
-            raise Exception('Empty or non-standard Word document (possibly Office theme file)')
-        
-        # 提取文本
-        for paragraph in doc.paragraphs:
-            text += paragraph.text + '\n'
-        
-        # 提取表格
+
+        text_lines = [p.text.strip() for p in doc.paragraphs if p.text and p.text.strip()]
+
         for table in doc.tables:
             table_data = []
             for row in table.rows:
-                row_data = [cell.text for cell in row.cells]
+                row_data = [cell.text.strip() if cell.text else '' for cell in row.cells]
                 table_data.append(row_data)
-            tables.append(table_data)
-        
-        # 实际应用中，还需要提取图片
-        
+            if table_data:
+                tables.append(table_data)
+
         return {
-            'text': text,
+            'text': '\n'.join(text_lines),
             'images': images,
             'tables': tables,
             'paragraph_count': len(doc.paragraphs),
-            'table_count': len(doc.tables)
+            'table_count': len(doc.tables),
         }
     except Exception as e:
-        # 检查是否是Office主题文件
-        import zipfile
-        try:
-            with zipfile.ZipFile(filepath, 'r') as zf:
-                # 检查Word文档的标准结构
-                required_files = ['word/document.xml', 'word/body.xml']
-                has_required_files = any(file in zf.namelist() for file in required_files)
-                
-                # 检查是否包含themeManager.xml
-                has_theme_manager = 'word/themeManager.xml' in zf.namelist()
-                
-                if has_theme_manager and not has_required_files:
-                    raise Exception('File appears to be an Office theme file, not a standard Word document')
-        except:
-            pass
-        
         raise Exception(f'Failed to parse Word document: {str(e)}')
 
-def parse_txt(filepath):
-    """解析文本文件"""
+def _read_text_with_fallback(filepath: str) -> str:
+    encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312', 'big5', 'latin-1']
+    for enc in encodings:
+        try:
+            with open(filepath, 'r', encoding=enc, errors='strict') as f:
+                return f.read()
+        except Exception:
+            continue
+
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-        text = f.read()
-    
+        return f.read()
+
+
+def parse_txt(filepath: str) -> Dict[str, Any]:
+    """解析文本文件。"""
+    text = _read_text_with_fallback(filepath)
     return {
         'text': text,
-        'line_count': len(text.split('\n'))
+        'line_count': len(text.splitlines())
     }
 
-def parse_md(filepath):
-    """解析Markdown文件"""
-    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-        text = f.read()
-    
+def parse_md(filepath: str) -> Dict[str, Any]:
+    """解析Markdown文件。"""
+    text = _read_text_with_fallback(filepath)
     return {
         'text': text,
-        'line_count': len(text.split('\n'))
+        'line_count': len(text.splitlines())
     }
 
-def parse_excel(filepath):
-    """解析Excel文件"""
+def parse_excel(filepath: str) -> Dict[str, Any]:
+    """解析Excel文件。"""
     tables = []
-    
-    # 读取所有工作表
-    xl = pd.ExcelFile(filepath)
+    ext = os.path.splitext(filepath)[1].lower()
+
+    try:
+        engine = 'xlrd' if ext == '.xls' else 'openpyxl'
+        xl = pd.ExcelFile(filepath, engine=engine)
+    except Exception as e:
+        raise Exception(f'Failed to open Excel file: {str(e)}')
+
     for sheet_name in xl.sheet_names:
-        df = xl.parse(sheet_name)
-        # 处理空DataFrame
+        try:
+            df = xl.parse(sheet_name)
+        except Exception:
+            continue
+
         if df.empty:
             continue
-            
-        # 将NaN替换为空字符串
+
         df = df.fillna('')
-        
         table_data = df.values.tolist()
-        # 添加表头
-        headers = df.columns.tolist()
+        headers = [str(h) for h in df.columns.tolist()]
         table_data.insert(0, headers)
-        tables.append({
-            'sheet_name': sheet_name,
-            'data': table_data
-        })
-    
+        tables.append({'sheet_name': sheet_name, 'data': table_data})
+
     return {
         'tables': tables,
         'sheet_count': len(tables)
     }
 
-def ocr_image(image_path):
-    """OCR识别图片中的文字"""
-    image = Image.open(image_path)
-    # 确保 Tesseract 路径配置正确，这里允许抛出异常以便上层捕获
-    text = pytesseract.image_to_string(image, lang='chi_sim')
-    return text
+
+def parse_image(filepath: str) -> Dict[str, Any]:
+    """解析图片文件，提取OCR文本。"""
+    text = ocr_image(filepath)
+    return {
+        'text': text,
+        'images': [filepath],
+        'tables': [],
+    }
+
+def ocr_image(image_path: str) -> str:
+    """OCR识别图片中的文字。"""
+    try:
+        image = Image.open(image_path)
+        return pytesseract.image_to_string(image, lang='chi_sim')
+    except Exception:
+        return ''

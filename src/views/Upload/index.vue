@@ -27,6 +27,20 @@
         </div>
       </el-upload>
     </div>
+
+    <div class="qa-health-panel">
+      <div class="qa-health-header">
+        <h3>知识问答服务状态</h3>
+        <button class="btn btn-sm btn-secondary" @click="refreshQaHealth" :disabled="healthLoading">
+          {{ healthLoading ? '检测中...' : '刷新状态' }}
+        </button>
+      </div>
+      <p :class="['qa-health-summary', qaHealthClass]">{{ qaHealthSummary }}</p>
+      <p v-if="qaHealthFileTip" class="qa-health-file-tip">{{ qaHealthFileTip }}</p>
+      <ul v-if="qaHealthIssues.length > 0" class="qa-health-issues">
+        <li v-for="(issue, index) in qaHealthIssues" :key="index">{{ issue }}</li>
+      </ul>
+    </div>
     
     <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
       <h3>上传进度</h3>
@@ -83,18 +97,71 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useFileStore } from '../../store/fileStore'
 import { uploadApi } from '../../api/upload'
+import { qaApi } from '../../api/qa'
 import { validateFile } from '../../utils/validate'
 import { formatFileSize, formatTime } from '../../utils/format'
 
 const fileStore = useFileStore()
 const fileList = ref([])
 const uploadProgress = ref(0)
+const qaHealth = ref(null)
+const healthLoading = ref(false)
 // 使用前端代理路径，确保请求经过Vite代理转发到后端
 const uploadUrl = '/api/upload'
+
+const qaHealthClass = computed(() => {
+  if (qaHealth.value?.ok) return 'health-success'
+  return 'health-error'
+})
+
+const qaHealthSummary = computed(() => {
+  if (!qaHealth.value) return '正在检测问答服务状态...'
+  if (qaHealth.value.ok) return '问答服务可用。'
+  return '问答服务不可用，请根据下方提示检查配置。'
+})
+
+const qaHealthFileTip = computed(() => {
+  const file = qaHealth.value?.file
+  if (!file) return ''
+  if (file.rag_ready) return '当前文件索引状态：已就绪，可直接提问。'
+  if (file.rag_error) return `当前文件索引状态：未就绪（${file.rag_error}）。`
+  return '当前文件索引状态：未就绪，请先完成解析。'
+})
+
+const qaHealthIssues = computed(() => {
+  const checks = qaHealth.value?.checks || {}
+  const issueMap = {
+    api_key: 'API Key',
+    vector_db_path: '向量库路径',
+    embedding: 'Embedding',
+    llm: 'LLM'
+  }
+  return Object.keys(checks)
+    .filter((k) => checks[k] && checks[k].ok === false)
+    .map((k) => `${issueMap[k] || k}: ${checks[k].message}`)
+})
+
+const refreshQaHealth = async () => {
+  healthLoading.value = true
+  try {
+    const fileId = fileStore.currentFile?.id || fileStore.uploadedFiles[0]?.id
+    const response = await qaApi.checkHealth(fileId)
+    qaHealth.value = response.health || null
+  } catch (_error) {
+    qaHealth.value = {
+      ok: false,
+      checks: {
+        llm: { ok: false, message: '健康检查请求失败，请确认后端服务运行正常。' }
+      }
+    }
+  } finally {
+    healthLoading.value = false
+  }
+}
 
 const handleFileChange = (file, fileList) => {
   // 文件选择变化时的处理
@@ -171,6 +238,9 @@ const parseFile = async (fileId) => {
     
     const response = await uploadApi.parseFile(fileId)
     if (response.success) {
+      if (response.warning) {
+        ElMessage.warning('文件已解析，但知识问答索引构建失败：' + response.warning)
+      }
       // 开始轮询解析进度
       startParseProgressPolling(fileId)
     } else {
@@ -195,6 +265,24 @@ const startParseProgressPolling = (fileId) => {
           clearInterval(interval)
           fileStore.setParseStatus('解析完成')
           ElMessage.success('文件解析成功')
+
+          try {
+            const healthResponse = await qaApi.checkHealth(fileId)
+            qaHealth.value = healthResponse.health || null
+            if (healthResponse.success) {
+              ElMessage.success('知识问答服务可用，可以开始提问。')
+            } else {
+              ElMessage.warning('文件已解析，但问答服务当前不可用，请检查模型配置或网络。')
+            }
+          } catch (_error) {
+            qaHealth.value = {
+              ok: false,
+              checks: {
+                llm: { ok: false, message: '健康检查请求失败，请确认后端服务运行正常。' }
+              }
+            }
+            ElMessage.warning('文件已解析，问答服务健康检查失败。')
+          }
           
           // 更新文件状态
           const file = fileStore.uploadedFiles.find(f => f.id === fileId)
@@ -243,6 +331,17 @@ const getStatusClass = (status) => {
       return ''
   }
 }
+
+onMounted(() => {
+  refreshQaHealth()
+})
+
+watch(
+  () => [fileStore.currentFile?.id, fileStore.uploadedFiles.length],
+  () => {
+    refreshQaHealth()
+  }
+)
 </script>
 
 <style scoped>
@@ -356,6 +455,55 @@ const getStatusClass = (status) => {
   color: rgba(255, 255, 255, 0.7); /* 浅灰色提示文字 */
   text-align: center;
   margin-top: 16px;
+}
+
+.qa-health-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.qa-health-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.qa-health-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.qa-health-summary {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.health-success {
+  color: #9be7c4;
+}
+
+.health-error {
+  color: #ffb3bf;
+}
+
+.qa-health-file-tip {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.qa-health-issues {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: #ffb3bf;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* 上传进度样式 */

@@ -9,6 +9,8 @@ backend/app/services/__pycache__/
 # Virtual environment
 venv/
 env/
+.venv/
+.venv312/
 
 # Build files
 dist/

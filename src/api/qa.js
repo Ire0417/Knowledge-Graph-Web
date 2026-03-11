@@ -1,6 +1,12 @@
 import api from './index'
 
 export const qaApi = {
+  // RAG健康检查
+  checkHealth: (fileId) => {
+    return api.get('/qa/health', {
+      params: fileId ? { fileId } : {}
+    })
+  },
   // 智能问答
   askQuestion: (question, fileId) => {
     return api.post('/qa/ask', { question, fileId })
