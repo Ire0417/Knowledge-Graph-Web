@@ -11,7 +11,7 @@
           </button>
         </div>
         <p v-if="healthMessage" :class="['health-tip', healthLevelClass]">{{ healthMessage }}</p>
-        <p v-if="fileHealthTip" class="file-health-tip">{{ fileHealthTip }}</p>
+        <p v-if="fileHealthTip" class="file-health-tip" v-html="fileHealthTip.replace(/\\n/g, '<br>')"></p>
         <ul v-if="healthIssues.length > 0" class="health-issues">
           <li v-for="(issue, index) in healthIssues" :key="index">{{ issue }}</li>
         </ul>
@@ -28,7 +28,6 @@
         </div>
         <div class="card-body">
           <div v-if="qaHistory.length === 0" class="empty-history">
-            <div class="empty-icon">💬</div>
             <h4>暂无问答历史</h4>
             <p>开始向系统提问吧</p>
           </div>
@@ -97,6 +96,9 @@
     <div v-if="answer" class="card">
       <div class="card-header">
         <h3 class="card-title">回答</h3>
+        <el-tag v-if="qaHistory.length > 0 && qaHistory[0].usedExtraction" type="success" size="small">
+          使用了知识抽取结果
+        </el-tag>
       </div>
       <div class="card-body">
         <div class="answer-content">{{ answer }}</div>
@@ -132,9 +134,15 @@ const healthLevelClass = computed(() => {
 const fileHealthTip = computed(() => {
   const file = qaHealth.value?.file
   if (!file) return ''
-  if (file.rag_ready) return '当前文件索引状态：已就绪，可直接提问。'
-  if (file.rag_error) return `当前文件索引状态：未就绪（${file.rag_error}）。`
-  return '当前文件索引状态：未就绪，请先完成解析。'
+  let tip = ''
+  if (file.rag_ready) tip += '当前文件索引状态：已就绪，可直接提问。'
+  else if (file.rag_error) tip += `当前文件索引状态：未就绪（${file.rag_error}）。`
+  else tip += '当前文件索引状态：未就绪，请先完成解析。'
+  
+  if (file.has_extraction) {
+    tip += `\n知识抽取状态：已完成（实体：${file.entity_count}，关系：${file.relation_count}）。`
+  }
+  return tip
 })
 
 const healthIssues = computed(() => {
@@ -239,8 +247,14 @@ const askQuestion = async () => {
       qaHistory.value.unshift({
         question: question.value,
         answer: response.answer,
-        timestamp: new Date()
+        timestamp: new Date(),
+        usedExtraction: response.used_extraction
       })
+      
+      // 如果使用了知识抽取，提示用户
+      if (response.used_extraction) {
+        ElMessage.success('本次回答使用了知识抽取结果！')
+      }
       
       // 保存到后端
       await qaApi.saveQaResult(question.value, response.answer, fileId)
@@ -387,32 +401,32 @@ watch(
 .file-health-tip {
   margin-top: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #333333;
 }
 
 .health-issues {
   margin-top: 8px;
   padding-left: 18px;
-  color: #ffb3bf;
+  color: #333333;
   font-size: 12px;
   line-height: 1.5;
 }
 
 .tip-success {
   background: rgba(25, 135, 84, 0.2);
-  color: #9be7c4;
+  color: #333333;
   border-color: rgba(25, 135, 84, 0.4);
 }
 
 .tip-info {
   background: rgba(13, 110, 253, 0.18);
-  color: #9bc7ff;
+  color: #333333;
   border-color: rgba(13, 110, 253, 0.38);
 }
 
 .tip-error {
   background: rgba(220, 53, 69, 0.2);
-  color: #ffb3bf;
+  color: #333333;
   border-color: rgba(220, 53, 69, 0.4);
 }
 
@@ -471,6 +485,7 @@ watch(
   font-size: 48px;
   margin-bottom: 16px;
   color: var(--primary-light);
+  background: #fff;
 }
 
 .empty-history h4 {

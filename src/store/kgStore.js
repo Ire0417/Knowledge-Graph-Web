@@ -13,11 +13,20 @@ export const useKgStore = defineStore('kg', {
     searchKeyword: ''
   }),
   getters: {
-    hasGraphData: (state) => state.graphData.nodes.length > 0
+    hasGraphData: (state) => {
+      // 安全检查
+      if (!state.graphData) return false
+      if (!state.graphData.nodes) return false
+      return state.graphData.nodes.length > 0
+    }
   },
   actions: {
     setGraphData(data) {
-      this.graphData = data
+      // 确保数据结构安全
+      this.graphData = {
+        nodes: (data && data.nodes) || [],
+        links: (data && data.links) || []
+      }
     },
     setBuildProgress(progress) {
       this.buildProgress = progress

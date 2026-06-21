@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // 代理API请求到Python后端
       "/api": {
-        target: "http://localhost:5000", // Python后端地址
+        target: "http://localhost:8000", // FastAPI后端地址（uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload）
         changeOrigin: true, // 解决跨域问题
         rewrite: (path) => path.replace(/^\/api/, ""), // 移除/api前缀
       },

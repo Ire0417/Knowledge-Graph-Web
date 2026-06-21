@@ -1,6 +1,10 @@
 import api from './index'
 
 export const graphApi = {
+  // 获取所有可构建图谱的文件
+  getGraphFiles: () => {
+    return api.get('/graph/files')
+  },
   // 构建知识图谱
   buildGraph: (fileId) => {
     return api.post('/graph/build', { fileId })

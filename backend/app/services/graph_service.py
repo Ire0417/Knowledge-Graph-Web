@@ -1,10 +1,20 @@
 import uuid
 
 def build_graph(file_info):
-    """构建知识图谱"""
+    """构建知识图谱 - 完全使用知识抽取结果"""
     extract_result = file_info.get('extract_result', {})
+    
+    # 优先从 extract_result 中获取原始抽取结果
     entities = extract_result.get('entities', [])
     relations = extract_result.get('relations', [])
+    triplets = extract_result.get('triplets', [])
+    
+    # 如果有原始 triplets 但没有 relations，转换一下
+    if not relations and triplets:
+        relations = [
+            {"subject": t.get("head", ""), "predicate": t.get("relation", ""), "object": t.get("tail", "")}
+            for t in triplets
+        ]
     
     print(f"Entities count: {len(entities)}")
     print(f"Relations count: {len(relations)}")
@@ -13,29 +23,44 @@ def build_graph(file_info):
     nodes = []
     edges = []
     
-    # 处理实体
+    # 处理实体 - 兼容两种格式
     entity_map = {}
     for entity in entities:
+        # 兼容两种格式：{'text': ..., 'label': ...} 或 {'text': ..., 'type': ...}
+        entity_text = entity.get('text', entity.get('name', ''))
+        entity_type = entity.get('label', entity.get('type', 'ENTITY'))
         node_id = str(uuid.uuid4())
-        entity_map[entity['text']] = node_id
+        entity_map[entity_text] = node_id
         nodes.append({
             'id': node_id,
-            'name': entity['text'],
-            'type': entity.get('type', 'ENTITY')
+            'name': entity_text,
+            'type': entity_type
         })
     
     # 处理关系
     for relation in relations:
-        if relation['subject'] in entity_map and relation['object'] in entity_map:
+        subject = relation.get('subject', '')
+        predicate = relation.get('predicate', '')
+        object_ = relation.get('object', '')
+        
+        # 同时兼容从 triplets 格式
+        if not subject and 'head' in relation:
+            subject = relation['head']
+        if not predicate and 'relation' in relation:
+            predicate = relation['relation']
+        if not object_ and 'tail' in relation:
+            object_ = relation['tail']
+        
+        if subject in entity_map and object_ in entity_map:
             edges.append({
-                'source': entity_map[relation['subject']],
-                'target': entity_map[relation['object']],
-                'relationship': relation['predicate']
+                'source': entity_map[subject],
+                'target': entity_map[object_],
+                'relationship': predicate
             })
         else:
-            print(f"Skipping relation: {relation['subject']} {relation['predicate']} {relation['object']}")
-            print(f"Subject in entity_map: {relation['subject'] in entity_map}")
-            print(f"Object in entity_map: {relation['object'] in entity_map}")
+            print(f"Skipping relation: {subject} {predicate} {object_}")
+            print(f"Subject in entity_map: {subject in entity_map}")
+            print(f"Object in entity_map: {object_ in entity_map}")
     
     print(f"Final nodes: {len(nodes)}")
     print(f"Final edges: {len(edges)}")
@@ -44,6 +69,25 @@ def build_graph(file_info):
         'nodes': nodes,
         'edges': edges
     }
+
+
+# 尝试把构建好的图谱保存到 Neo4j（如果可用）
+try:
+    from app.database.neo4j import save_graph
+except Exception:
+    save_graph = None
+
+
+def build_and_persist_graph(file_info):
+    graph = build_graph(file_info)
+    file_info['graph_result'] = graph
+    # 若 Neo4j 可用，尝试保存
+    if save_graph and file_info.get('id'):
+        try:
+            save_graph(file_info.get('id'), graph)
+        except Exception:
+            pass
+    return graph
 
 def get_graph_data(file_info):
     """获取图谱数据"""

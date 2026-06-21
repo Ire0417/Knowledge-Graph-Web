@@ -1,11 +1,11 @@
-import os
+from app.utils.file import *  # noqa: F401,F403import os
 from typing import Any, Dict, List
 
 import pandas as pd
-import PyPDF2
 import pytesseract
 from docx import Document
 from PIL import Image
+from pypdf import PdfReader
 
 def parse_file(filepath: str) -> Dict[str, Any]:
     """解析不同格式文件，并统一返回结构。"""
@@ -39,7 +39,7 @@ def parse_pdf(filepath: str) -> Dict[str, Any]:
 
     try:
         with open(filepath, 'rb') as f:
-            reader = PyPDF2.PdfReader(f)
+            reader = PdfReader(f)
 
             if getattr(reader, 'is_encrypted', False):
                 try:

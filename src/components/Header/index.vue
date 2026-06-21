@@ -3,34 +3,74 @@
     <div class="navbar-container">
       <div class="navbar-left">
         <router-link to="/" class="navbar-logo">
-          <span>知识图谱生成系统</span>
+          <span>知识图谱系统</span>
         </router-link>
       </div>
       <nav class="navbar-nav">
         <router-link to="/" class="navbar-link">首页</router-link>
         <router-link to="/upload" class="navbar-link">文件上传</router-link>
+        <router-link to="/extraction" class="navbar-link">知识抽取</router-link>
         <router-link to="/kg-build" class="navbar-link">图谱构建</router-link>
         <router-link to="/kg-visual" class="navbar-link">图谱可视化</router-link>
         <router-link to="/qa" class="navbar-link">智能问答</router-link>
       </nav>
+      <div class="navbar-right">
+        <el-dropdown v-if="userStore.isAuthenticated" @command="handleCommand">
+          <div class="user-info">
+            <el-avatar :size="32" class="user-avatar">
+              {{ userStore.user?.nickname?.charAt(0) || userStore.user?.username?.charAt(0) || 'U' }}
+            </el-avatar>
+            <span class="user-name">{{ userStore.user?.nickname || userStore.user?.username }}</span>
+            <el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <router-link v-else to="/login" class="login-link">登录</router-link>
+      </div>
     </div>
   </header>
 </template>
 
 <script setup>
-// Header logic
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { useUserStore } from '../../store/userStore'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const handleCommand = async (command) => {
+  if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      await userStore.logout()
+      ElMessage.success('已退出登录')
+      router.push('/login')
+    } catch {
+      // 用户取消
+    }
+  } else if (command === 'profile') {
+    router.push('/profile')
+  }
+}
 </script>
 
 <style scoped>
 .navbar {
-  /* 更透明的玻璃效果 */
-  background: rgba(15, 15, 26, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  /* 阴影让导航栏悬浮感更强 */
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  padding: 16px 0;
+  background: white;
+  border-bottom: 1px solid #ebeef5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 12px 0;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -41,9 +81,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
 }
 
 .navbar-left {
@@ -52,23 +92,13 @@
 }
 
 .navbar-logo {
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
   text-decoration: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
-}
-
-.navbar-logo:hover {
-  transform: scale(1.05);
-  text-shadow: 0 0 8px rgba(123, 44, 191, 0.5);
-}
-
-.logo-icon {
-  font-size: 24px;
 }
 
 .navbar-nav {
@@ -78,16 +108,15 @@
 }
 
 .navbar-link {
-  color: rgba(255, 255, 255, 0.7);
+  color: #606266;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: color 0.3s;
   position: relative;
   padding: 4px 0;
 }
 
-/* 链接下划线动画 */
 .navbar-link::after {
   content: '';
   position: absolute;
@@ -95,36 +124,60 @@
   height: 2px;
   bottom: 0;
   left: 0;
-  background: var(--primary-light);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 8px var(--primary-light);
+  background: #1890ff;
+  transition: width 0.3s;
 }
 
 .navbar-link:hover {
-  color: #fff;
+  color: #1890ff;
 }
 
 .navbar-link.router-link-active {
-  color: #fff;
+  color: #1890ff;
 }
 
-.navbar-link:hover::after, .navbar-link.router-link-active::after {
+.navbar-link:hover::after,
+.navbar-link.router-link-active::after {
   width: 100%;
 }
 
-.btn-sm {
-  padding: 8px 20px;
+.navbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.3s;
+}
+
+.user-info:hover {
+  background: #f5f7fa;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+}
+
+.user-name {
   font-size: 14px;
+  color: #303133;
 }
 
-.glass-btn {
-  background: rgba(123, 44, 191, 0.6);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.login-link {
+  color: #1890ff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.3s;
 }
 
-.glass-btn:hover {
-  background: rgba(157, 78, 221, 0.8);
-  box-shadow: 0 0 15px rgba(123, 44, 191, 0.5);
+.login-link:hover {
+  color: #40a9ff;
 }
 </style>

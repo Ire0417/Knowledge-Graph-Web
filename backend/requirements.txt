@@ -1,6 +1,9 @@
-Flask==3.0.3
-Flask-CORS==5.0.0
-PyPDF2==3.0.1
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.6.1
+python-dotenv==1.0.0
+pypdf==5.5.0
 python-docx==1.1.2
 pytesseract==0.3.13
 Pillow==10.4.0
@@ -16,3 +19,15 @@ langchain-openai==0.3.31
 langchain-text-splitters==0.3.9
 chromadb==1.5.5
 dashscope==1.23.8
+neo4j==5.28.4
+pymysql==1.1.0
+bleach==6.2.0
+bcrypt==4.3.0
+python-jose[cryptography]==3.3.0
+# ---- Concurrency & Cache ----
+redis==5.0.1
+hiredis==2.3.2
+# transformers + torch (optional, for GPU-based NER)
+# torch>=2.0.0
+# transformers>=4.40.0
+# datasets>=2.19.0

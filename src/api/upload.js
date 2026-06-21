@@ -27,6 +27,10 @@ export const uploadApi = {
   getFileList: () => {
     return api.get('/upload/files')
   },
+  // 获取文件解析后的内容
+  getFileContent: (fileId) => {
+    return api.get(`/upload/content/${fileId}`)
+  },
   // 删除文件 - 修正路径，添加/upload前缀
   deleteFile: (fileId) => {
     return api.delete(`/upload/files/${fileId}`)

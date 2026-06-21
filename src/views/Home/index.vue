@@ -1,384 +1,880 @@
 <template>
-  <div class="home-container">
-    <!-- 英雄区域 -->
-    <div class="hero">
-      <div class="hero-bg-glow"></div>
-      <div class="hero-container">
-        <div class="hero-content">
-          <div class="hero-badge glass-panel">智能知识图谱系统 v2.0</div>
-          <h1 class="hero-title">构建您的<br><span class="text-gradient">知识宇宙</span></h1>
-          <p class="hero-description">
-            基于多模态数据的智能知识图谱构建与可视化平台。
-            <br>从文件到知识的全流程解决方案，让数据触手可及。
-          </p>
-          <div class="hero-buttons">
-            <router-link to="/upload" class="btn btn-primary">
-              <span>开始上传</span>
-            </router-link>
-            <router-link to="/kg-visual" class="btn btn-secondary">
-              <span>查看演示</span>
-            </router-link>
-          </div>
-        </div>
-        
-        <!-- 装饰性 3D 元素 -->
-        <div class="hero-visual">
-          <div class="floating-card glass-panel card-1">
-            <div class="card-icon">📄</div>
-            <div class="card-line"></div>
-            <div class="card-line short"></div>
-          </div>
-          <div class="floating-card glass-panel card-2">
-            <div class="card-icon">🕸️</div>
-            <div class="card-graph">
-              <div class="node n1"></div>
-              <div class="node n2"></div>
-              <div class="node n3"></div>
-              <div class="link l1"></div>
-              <div class="link l2"></div>
+  <div class="app-container stagingIndex">
+    <el-row :gutter="16">
+      <el-col :xs="24" :sm="24" :md="18" :lg="18" class="home-gutter">
+        <div class="userInfo module-1">
+          <div class="info-main">
+            <div class="avatar-placeholder">
+              <span class="avatar-icon"></span>
+            </div>
+            <div class="info-con">
+              <div class="info-con-name">
+                上午好，{{ userStore.user?.nickname || userStore.user?.username || '用户' }}，祝您开心每一天！
+              </div>
+              <div class="info-con-desc">
+                <span class="role-tag">系统管理员</span>
+                <span class="desc-text">{{ xljtcont }}</span>
+              </div>
+            </div>
+            <div class="info-btns">
+              <el-button type="primary" size="default" @click="goprofile">
+                个人中心
+              </el-button>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- 特性区域 -->
-    <div class="features">
-      <div class="features-container">
-        <h2 class="section-title">核心功能</h2>
-        <p class="section-subtitle">探索 AI 驱动的知识图谱构建能力</p>
-        
-        <div class="features-grid">
-          <div 
-            v-for="(feature, index) in features" 
+      </el-col>
+      <el-col :xs="24" :sm="24" :md="6" :lg="6" class="home-gutter">
+        <div class="module-2">
+          <div class="weather-card">
+            <div class="weather-icon"></div>
+            <div class="weather-temp">23°C</div>
+            <div class="weather-desc">晴朗</div>
+            <div class="weather-city">北京</div>
+          </div>
+        </div>
+      </el-col>
+
+      <el-col :xs="24" :sm="24" :md="18" :lg="18" class="home-gutter">
+        <div class="module-3">
+          <div
+            class="module-item"
+            v-for="(item, index) in module1"
             :key="index"
-            class="feature-card glass-panel"
-            :class="{ 'active': activeFeature === index }"
-            @click="activateFeature(index)"
           >
-            <div class="feature-content">
-              <h3 class="feature-title">{{ feature.title }}</h3>
-              <p class="feature-description">{{ feature.desc }}</p>
+            <div class="module-item-t">
+              <div class="module-item-t-l">
+                <div class="name">{{ item.name }}</div>
+                <span class="value">{{ item.value }}</span>
+              </div>
+              <div class="module-item-t-r"></div>
             </div>
-            
-            <!-- 展开后的额外内容 -->
-            <div class="feature-details" v-if="activeFeature === index">
-              <div class="detail-line"></div>
-              <p>点击进入功能详情页面，体验更深度的 {{ feature.title }} 服务。</p>
-              <button class="btn btn-sm btn-primary">立即体验</button>
+
+            <div class="module-item-data">
+              <span class="label">周同比：</span>
+              <span :class="['trend', item.up ? 'trend-up' : 'trend-down']">
+                {{ item.up ? '+' : '' }}{{ item.speed }}%
+              </span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- 沉浸式展开遮罩 (可选，如果想要全屏体验) -->
-    <transition name="modal">
-      <div class="feature-modal" v-if="activeFeature !== null" @click.self="activeFeature = null">
-        <div class="modal-content glass-panel">
-          <button class="close-btn" @click="activeFeature = null">×</button>
-          <h2>{{ features[activeFeature].title }}</h2>
-          <p class="modal-desc">{{ features[activeFeature].desc }}</p>
-          <div class="modal-body">
-            <p>这里展示关于 {{ features[activeFeature].title }} 的更多详细信息。在这个沉浸式视图中，您可以专注于当前的功能模块。</p>
-            <div class="modal-visual">
-              <!-- 模拟功能预览图 -->
-              <div class="skeleton-box"></div>
-              <div class="skeleton-lines">
-                <div class="line"></div>
-                <div class="line"></div>
-                <div class="line"></div>
+
+        <el-row :gutter="16">
+          <el-col :xs="24" :sm="24" :md="12" :lg="12">
+            <div class="module-4 border-item">
+              <div class="border-item-head">
+                <span class="head-title">文件类型统计</span>
+              </div>
+              <div class="border-item-body">
+                <div class="chart-container" ref="module4ChartRef"></div>
+              </div>
+            </div>
+          </el-col>
+          <el-col :xs="24" :sm="24" :md="12" :lg="12">
+            <div class="module-5 border-item">
+              <div class="border-item-head">
+                <span class="head-title">近7日抽取数量统计</span>
+              </div>
+              <div class="border-item-body">
+                <div class="chart-container" ref="module5ChartRef"></div>
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+      </el-col>
+
+      <el-col :xs="24" :sm="24" :md="6" :lg="6" class="home-gutter">
+        <div class="border-item module-6 home-gutter">
+          <div class="border-item-head">
+            <span class="head-title">新闻公告</span>
+            <el-link type="primary" :underline="false" @click="goxinwen">
+              查看更多
+            </el-link>
+          </div>
+          <div class="border-item-body">
+            <div
+              class="news-item"
+              v-for="(item, index) in module6"
+              :key="index"
+              @click="goxinwen"
+            >
+              <el-tag :type="item.type" size="small" effect="light">{{ item.title }}</el-tag>
+              <div class="news-text">{{ item.value }}</div>
+              <div class="news-time">{{ item.date }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="border-item module-7">
+          <div class="border-item-head">
+            <span class="head-title">快捷功能入口</span>
+          </div>
+          <div class="border-item-body">
+            <div class="all-entrance">
+              <div
+                class="entrance-item"
+                v-for="item in entranceList"
+                :key="item.name"
+                @click="routeTo(item.path, item.query)"
+              >
+                <div class="name">{{ item.name }}</div>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-primary">进入功能</button>
+        </div>
+      </el-col>
+
+      <el-col :xs="24" :sm="24" :md="9" :lg="9">
+        <div class="module-8 border-item">
+          <div class="border-item-head">
+            <span class="head-title">近半年实体新增趋势</span>
+            <el-link type="primary" :underline="false">查看更多</el-link>
+          </div>
+          <div class="border-item-body">
+            <div class="chart-container" ref="module8ChartRef"></div>
           </div>
         </div>
-      </div>
-    </transition>
+      </el-col>
 
+      <el-col :xs="24" :sm="24" :md="15" :lg="15">
+        <div class="module-9 border-item">
+          <div class="border-item-head">
+            <span class="head-title">抽取任务</span>
+            <el-link type="primary" :underline="false">查看更多</el-link>
+          </div>
+          <div class="border-item-body">
+            <el-table :data="module9" style="width: 100%" size="default">
+              <el-table-column
+                fixed
+                prop="id"
+                label="ID"
+                align="center"
+                width="80"
+              >
+                <template #default="scope">
+                  <span class="table-id">{{ scope.row.id }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="name" label="任务名称" min-width="200" />
+              <el-table-column prop="status" align="center" label="任务状态" width="100">
+                <template #default="scope">
+                  <el-tag :type="getStatusType(scope.row.status)" size="small">
+                    {{ scope.row.status }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="publishStatus"
+                align="center"
+                label="发布状态"
+                width="100"
+              >
+                <template #default="scope">
+                  <el-tag :type="scope.row.publishStatus === '已发布' ? 'success' : 'info'" size="small">
+                    {{ scope.row.publishStatus }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="publishBy" align="center" label="发布人" width="100" />
+              <el-table-column prop="createTime" label="创建时间" width="180" />
+            </el-table>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup name="Index">
+import { useRouter } from 'vue-router';
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import * as echarts from "echarts";
+import { useUserStore } from '../../store/userStore';
 
-const activeFeature = ref(null)
+const router = useRouter();
+const userStore = useUserStore();
 
-const features = [
-  { title: '多模态数据处理', desc: '支持PDF、Word、Excel等多种文件格式，自动解析文本、表格和图片内容' },
-  { title: '智能知识抽取', desc: '基于学术领域NER模型，自动识别实体和关系，提取结构化知识' },
-  { title: '图谱构建与优化', desc: '支持实体对齐、关系合并和图谱结构优化，构建高质量知识网络' },
-  { title: '交互式可视化', desc: '力导向图布局，支持节点拖拽、缩放、折叠和路径查询' },
-  { title: '智能问答', desc: '基于知识图谱的自然语言问答，支持上下文理解和多轮对话' },
-  { title: '数据导出', desc: '支持多种格式导出，包括JSON、CSV和图形文件' }
-]
+const entranceList = [
+  {
+    name: "文件管理",
+    path: "/upload",
+    query: {},
+  },
+  {
+    name: "知识问答",
+    path: "/qa",
+    query: {},
+  },
+  {
+    name: "图谱构建",
+    path: "/kg-build",
+    query: {},
+  },
+  {
+    name: "图谱可视化",
+    path: "/kg-visual",
+    query: {},
+  },
+];
 
-const activateFeature = (index) => {
-  activeFeature.value = index
-}
+const chartInstances = [];
+
+const module1 = ref([
+  {
+    name: "实体总数",
+    value: 126,
+    up: true,
+    speed: 12,
+  },
+  {
+    name: "关系总数",
+    value: 72,
+    up: true,
+    speed: 2,
+  },
+  {
+    name: "三元组总数",
+    value: 164,
+    up: true,
+    speed: 9,
+  },
+  {
+    name: "文件总数",
+    value: 76,
+    up: true,
+    speed: 10,
+  },
+  {
+    name: "抽取任务总数",
+    value: 18,
+    up: false,
+    speed: 10,
+  },
+]);
+
+const goxinwen = () => {
+  console.log("查看新闻公告");
+};
+
+const goprofile = () => {
+  router.push("/profile");
+};
+
+const routeTo = (link, query = {}) => {
+  if (link) {
+    router.push({ path: link, query });
+  }
+};
+
+const xljtcont = ref("");
+const getxljtcont = () => {
+  const xljtlist = [
+    { value: "起风的日子，学会依风起舞，下雨的时候，学会为自己撑伞。" },
+    { value: "别让鸡零狗碎的破事，耗尽你对美好生活的所有向往。" },
+    { value: "管好身体，照顾好家人，要自己感受生活的美好。" },
+    { value: "我希望你过普通的生活，有稳定的收入和爱你的人。" },
+    { value: "一定要努力赚钱，好好经营自己。" },
+    { value: "我们穷极一生追求的幸福，眼中景，盘中餐，身边人。" },
+    { value: "日出有盼，日落有思，平平安安，所遇皆甜。" },
+    { value: "不要慌，太阳下山有月光。" },
+    { value: "几经波折见风雪，再见是我也非我。" },
+  ];
+  const num = Math.floor(Math.random() * xljtlist.length);
+  xljtcont.value = xljtlist[num].value;
+};
+
+const module4ChartRef = ref(null);
+const initModule4 = () => {
+  const instance = echarts.init(module4ChartRef.value);
+  const data = [
+    { value: 130, name: "基础理论" },
+    { value: 150, name: "智能技术" },
+    { value: 100, name: "行业应用" },
+    { value: 190, name: "未来趋势" },
+    { value: 200, name: "其他" },
+  ];
+
+  const option = {
+    tooltip: {
+      trigger: "item",
+      formatter: "{b}: {c} ({d}%)",
+    },
+    legend: {
+      orient: "vertical",
+      right: 10,
+      top: "center",
+      textStyle: {
+        color: "#606266",
+        fontSize: 12,
+      },
+    },
+    series: [
+      {
+        name: "文件类型",
+        type: "pie",
+        radius: ["40%", "60%"],
+        center: ["35%", "50%"],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+        label: {
+          show: false,
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: "bold",
+          },
+        },
+        data: data,
+        color: ["#7fb3e0", "#a5d0a7", "#e8c88a", "#b8a5d3", "#e0a5bd"],
+      },
+    ],
+  };
+  instance.setOption(option);
+  chartInstances.push(instance);
+};
+
+const module5ChartRef = ref(null);
+const initModule5 = () => {
+  const instance = echarts.init(module5ChartRef.value);
+  instance.setOption({
+    grid: {
+      top: 40,
+      bottom: 30,
+      right: 20,
+      left: 50,
+    },
+    xAxis: {
+      type: "category",
+      data: ["05-01", "05-02", "05-03", "05-04", "05-05", "05-06", "05-07"],
+      axisLine: { lineStyle: { color: "#e4e7ed" } },
+      axisLabel: { color: "#909399" },
+    },
+    yAxis: {
+      type: "value",
+      max: 1000,
+      splitLine: { lineStyle: { color: "#f5f7fa" } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: "#909399" },
+    },
+    series: [
+      {
+        type: "bar",
+        name: "抽取实体数量",
+        barWidth: 30,
+        itemStyle: {
+          color: "#1890ff",
+          borderRadius: [4, 4, 0, 0],
+        },
+        data: [800, 550, 740, 450, 800, 730, 600],
+      },
+    ],
+  });
+  chartInstances.push(instance);
+};
+
+const module6 = ref([
+  {
+    date: "2025-05-20",
+    title: "置顶",
+    value: "知识图谱系统 v2.0 发布",
+    type: "danger",
+  },
+  {
+    date: "2025-05-18",
+    title: "新闻",
+    value: "新增智能问答功能",
+    type: "success",
+  },
+  {
+    date: "2025-05-15",
+    title: "公告",
+    value: "系统升级维护通知",
+    type: "primary",
+  },
+  {
+    date: "2025-05-10",
+    title: "其他",
+    value: "文档更新完成",
+    type: "info",
+  },
+  {
+    date: "2025-05-05",
+    title: "新闻",
+    value: "新功能上线预告",
+    type: "warning",
+  },
+]);
+
+const module8ChartRef = ref(null);
+const initModule8 = () => {
+  const instance = echarts.init(module8ChartRef.value);
+  instance.setOption({
+    grid: {
+      top: 40,
+      bottom: 30,
+      right: 20,
+      left: 50,
+    },
+    xAxis: {
+      type: "category",
+      data: ["12月", "1月", "2月", "3月", "4月", "5月"],
+      axisLine: { lineStyle: { color: "#e4e7ed" } },
+      axisLabel: { color: "#909399" },
+    },
+    yAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "#f5f7fa" } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: "#909399" },
+    },
+    series: [
+      {
+        type: "line",
+        name: "实体新增趋势",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 6,
+        lineStyle: {
+          color: "#1890ff",
+          width: 2,
+        },
+        itemStyle: {
+          color: "#1890ff",
+        },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(24, 144, 255, 0.3)" },
+              { offset: 1, color: "rgba(24, 144, 255, 0.05)" },
+            ],
+          },
+        },
+        data: [120, 132, 101, 134, 90, 230],
+      },
+    ],
+  });
+  chartInstances.push(instance);
+};
+
+const module9 = ref([
+  {
+    id: "1",
+    name: "论文数据集抽取任务",
+    status: "进行中",
+    publishStatus: "已发布",
+    publishBy: "管理员",
+    createTime: "2025-05-20 10:30:00",
+  },
+  {
+    id: "2",
+    name: "知识库构建任务",
+    status: "已完成",
+    publishStatus: "已发布",
+    publishBy: "管理员",
+    createTime: "2025-05-18 14:20:00",
+  },
+  {
+    id: "3",
+    name: "新闻资讯抽取",
+    status: "等待中",
+    publishStatus: "草稿",
+    publishBy: "用户",
+    createTime: "2025-05-15 09:15:00",
+  },
+  {
+    id: "4",
+    name: "产品文档分析",
+    status: "已完成",
+    publishStatus: "已发布",
+    publishBy: "管理员",
+    createTime: "2025-05-12 16:45:00",
+  },
+]);
+
+const getStatusType = (status) => {
+  const map = {
+    "进行中": "primary",
+    "已完成": "success",
+    "等待中": "warning",
+    "失败": "danger",
+  };
+  return map[status] || "info";
+};
+
+onMounted(() => {
+  getxljtcont();
+  setTimeout(() => {
+    initModule4();
+    initModule5();
+    initModule8();
+  }, 100);
+
+  const handleResize = () => {
+    chartInstances.forEach(chart => {
+      chart.resize();
+    });
+  };
+  window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+  chartInstances.forEach(chart => {
+    chart.dispose();
+  });
+});
 </script>
 
 <style scoped>
-.home-container {
-  min-height: 100vh;
-  color: #fff;
+.app-container {
+  padding: 16px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 60px);
 }
 
-/* 文本渐变通用类 */
-.text-gradient {
-  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.stagingIndex {
+  padding-bottom: 20px;
 }
 
-/* 英雄区域 */
-.hero {
-  padding: 120px 0 80px;
-  position: relative;
-  /* overflow: hidden; 不隐藏溢出，为了光晕效果 */
-}
-
-.hero-bg-glow {
-  position: absolute;
-  top: -20%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80%;
-  height: 80%;
-  background: radial-gradient(circle, rgba(123, 44, 191, 0.4) 0%, transparent 70%);
-  filter: blur(60px);
-  z-index: -1;
-  pointer-events: none;
-}
-
-.hero-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.hero-content {
-  max-width: 600px;
-  z-index: 2;
-}
-
-.hero-badge {
-  display: inline-block;
-  padding: 8px 16px;
-  font-size: 14px;
-  color: #d8b4fe;
-  border-radius: 50px;
-  margin-bottom: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.hero-title {
-  font-size: 64px;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 24px;
-  letter-spacing: -2px;
-}
-
-.hero-description {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 40px;
-  line-height: 1.6;
-}
-
-.hero-buttons {
-  display: flex;
-  gap: 20px;
-}
-
-/* 装饰元素 */
-.hero-visual {
-  position: relative;
-  width: 400px;
-  height: 400px;
-  display: none; /* 移动端隐藏 */
-}
-
-@media (min-width: 992px) {
-  .hero-visual {
-    display: block;
-  }
-}
-
-.floating-card {
-  position: absolute;
-  padding: 20px;
-  border-radius: 20px;
-  animation: float 6s ease-in-out infinite;
-}
-
-.card-1 {
-  width: 200px;
-  height: 280px;
-  top: 0;
-  right: 40px;
-  z-index: 1;
-  transform: rotate(-10deg);
-  animation-delay: 0s;
-}
-
-.card-2 {
-  width: 240px;
-  height: 160px;
-  bottom: 40px;
-  left: 0;
-  z-index: 2;
-  transform: rotate(5deg);
-  animation-delay: 3s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
-  50% { transform: translateY(-20px) rotate(var(--rot, 0deg)); }
-}
-
-.card-icon { font-size: 40px; margin-bottom: 10px; }
-.card-line { height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-bottom: 8px; }
-.card-line.short { width: 60%; }
-
-/* 特性与卡片 */
-.features {
-  padding: 80px 0;
-}
-
-.features-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.section-title {
-  font-size: 40px;
-  text-align: center;
-  margin-bottom: 10px;
-  font-weight: 700;
-}
-
-.section-subtitle {
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 60px;
-  font-size: 18px;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-}
-
-.feature-card {
-  padding: 40px 30px;
-  border-radius: 24px;
-  transition: all 0.4s var(--spring-easing);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-height: 240px;
-}
-
-.feature-card:hover {
-  transform: translateY(-10px) scale(1.02);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.feature-title {
-  font-size: 24px;
-  font-weight: 600;
+.home-gutter {
   margin-bottom: 16px;
 }
 
-.feature-description {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.6;
+/* 用户信息模块 */
+.module-1 {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
 }
 
-/* Modal 沉浸式展开 */
-.feature-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  z-index: 1000;
+.info-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
 }
 
-.modal-content {
+.avatar-icon {
+  font-size: 28px;
+  background: #fff;
+}
+
+.info-con {
+  flex: 1;
+}
+
+.info-con-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.info-con-desc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-tag {
+  display: inline-block;
+  padding: 2px 12px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.desc-text {
+  color: #909399;
+  font-size: 13px;
+}
+
+/* 天气模块 */
+.module-2 {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
+  height: 100%;
+}
+
+.weather-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.weather-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.weather-temp {
+  font-size: 28px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.weather-desc {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 4px;
+}
+
+.weather-city {
+  font-size: 12px;
+  color: #909399;
+}
+
+/* 统计模块 */
+.module-3 {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.module-3 .module-item {
+  flex: 1;
+  min-width: 160px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #ebeef5;
+}
+
+.module-item-t {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.module-item-t-l {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.module-item-t-l .name {
+  font-size: 13px;
+  color: #909399;
+}
+
+.module-item-t-l .value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.module-item-t-r {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-icon {
+  font-size: 22px;
+  background: #fff;
+}
+
+.module-item-data {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.module-item-data .label {
+  color: #909399;
+}
+
+.trend {
+  font-weight: 500;
+}
+
+.trend-up {
+  color: #52c41a;
+}
+
+.trend-down {
+  color: #f5222d;
+}
+
+/* 通用卡片 */
+.border-item {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+  margin-bottom: 16px;
+}
+
+.border-item-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid #ebeef5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.head-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.border-item-body {
+  padding: 16px;
+}
+
+.chart-container {
   width: 100%;
-  max-width: 800px;
-  padding: 60px;
-  position: relative;
-  background: rgba(30, 30, 40, 0.6); /*稍微深一点以突出*/
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  transform-origin: center;
+  height: 220px;
 }
 
-.close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 32px;
+/* 新闻公告 */
+.module-6 .news-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f7fa;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  transition: background 0.2s;
 }
 
-.close-btn:hover { opacity: 1; }
-.modal-content h2 { font-size: 36px; margin-bottom: 16px; }
-.modal-desc { font-size: 20px; color: rgba(255, 255, 255, 0.8); margin-bottom: 40px; }
-.modal-body { display: flex; flex-direction: column; gap: 20px; }
-.modal-visual {
-  height: 200px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
+.module-6 .news-item:hover {
+  background: #fafafa;
+  margin: 0 -8px;
+  padding: 10px 8px;
+  border-radius: 4px;
 }
 
-/* Skeleton loader for visual */
-.skeleton-box { width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 8px; float: left; margin-right: 20px; }
-.skeleton-lines .line { height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 12px; }
-.skeleton-lines .line:last-child { width: 60%; }
+.module-6 .news-item:last-child {
+  border-bottom: none;
+}
 
-/* Modal 动画 */
-.modal-enter-active, .modal-leave-active {
-  transition: opacity 0.3s ease;
+.module-6 .news-text {
+  flex: 1;
+  font-size: 13px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.modal-enter-from, .modal-leave-to {
-  opacity: 0;
+
+.module-6 .news-time {
+  font-size: 12px;
+  color: #c0c4cc;
+  flex-shrink: 0;
 }
-.modal-enter-active .modal-content {
-  animation: modal-pop 0.4s var(--spring-easing) forwards;
+
+/* 快捷入口 */
+.all-entrance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-@keyframes modal-pop {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+
+.entrance-item {
+  width: calc(50% - 6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+  border: 1px solid transparent;
+}
+
+.entrance-item:hover {
+  background: #f0f7ff;
+  border-color: #1890ff;
+}
+
+.entrance-item .entrance-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.entrance-item .name {
+  font-size: 13px;
+  color: #303133;
+  text-align: center;
+}
+
+/* 表格样式 */
+.table-id {
+  font-family: 'Courier New', monospace;
+  color: #606266;
+  font-size: 13px;
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+  .module-3 .module-item {
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 12px;
+  }
+
+  .info-main {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .info-con-desc {
+    justify-content: center;
+  }
+
+  .module-3 {
+    flex-direction: column;
+  }
+
+  .module-3 .module-item {
+    min-width: 100%;
+  }
+
+  .entrance-item {
+    width: calc(50% - 6px);
+  }
 }
 </style>
